@@ -4,6 +4,7 @@
 import sys
 from pathlib import Path
 
+import h5py
 import pytest
 import yaml
 
@@ -16,8 +17,20 @@ from nconfig import get_config
 project_root = Path(__file__).resolve().parents[2]
 test_data_path = project_root / "data" / "test_data.hdf5"
 parameters_path = project_root / "data" / "dataset_parameters.csv"
-if not test_data_path.exists() or not parameters_path.exists():
-    print("Test data or parameters not found. Generating...")
+
+needs_gen = not test_data_path.exists() or not parameters_path.exists()
+if not needs_gen:
+    try:
+        with h5py.File(test_data_path, "r") as f:
+            sample_shape = f["simulation_0"]["B"].shape
+            cfg = get_config("config.yml")
+            if sample_shape != (cfg.mesh.num_points_y, cfg.mesh.num_points_x):
+                needs_gen = True
+    except Exception:
+        needs_gen = True
+
+if needs_gen:
+    print("Test data missing or dimension mismatch. Generating...")
     sys.path.append(str(project_root / "tests"))
     from generate_test_data import create_fake_test_data
 

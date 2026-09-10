@@ -20,7 +20,10 @@ def create_fake_test_data():
 
     # Define dataset parameters
     num_samples = 10
-    height, width = 11, 401
+    from nconfig import get_config
+
+    config = get_config()
+    height, width = config.mesh.num_points_y, config.mesh.num_points_x
 
     # Define variable names for fields and scalars
     field_vars = ["B", "H", "U", "V"]
