@@ -1,0 +1,198 @@
+# ===================================================================
+# Unified Project Configuration for FNO-TELEMAC Surrogate Model
+# ===================================================================
+# This file is the single source of truth for all project parameters,
+# controlling everything from data generation to model training.
+
+project_name: "FNO-TELEMAC-Thesis"
+seed: 43
+device: "cpu" # "auto" will use "cuda" if available, otherwise "cpu". Can be set to "cpu" manually.
+
+api_keys:
+  wandb: "${WANDB_API_KEY}" # Loads from the WANDB_API_KEY environment variable for security.
+
+# ===================================================================
+# Section 1: TELEMAC-2D Simulation & Physical Settings
+# ===================================================================
+# These parameters define the physical domain and the scope of the
+# data generation process using TELEMAC-2D.
+
+channel:
+  width: 0.3          # Channel width in meters.
+  length: 12          # Channel length in meters.
+  depth: 0.3          # Not used in simulation, for reference.
+  wall_thickness: 0.0 # Not used in simulation, for reference.
+
+mesh:
+  num_points_x: 401   # Number of grid points along the channel length.
+  num_points_y: 32    # Number of grid points along the channel width.
+  base_mesh_file: "mesh_3x3.slf"       # Base SELAFIN mesh in telemac/geo/ (update after generating new mesh)
+  subcritical_cli: "3x3_riv.cli"       # Subcritical .cli in telemac/bnd/ (update after generating new boundary files)
+  supercritical_cli: "3x3_tor.cli"     # Supercritical .cli in telemac/bnd/ (update after generating new boundary files)
+
+simulation_params:
+  adimensional_generation: false # Sample physical params + variable L for natural Ar variation
+  gravity: 9.81
+
+  # Parameter ranges for Latin Hypercube Sampling (LHS).
+  # The script will use either the dimensional (slope, n, q0, h0) or the
+  # adimensional (Ar, Hr, etc.) ranges based on the flag above.
+
+  parameter_ranges:
+    # Dimensional
+    slope_min: 0.000003
+    slope_max: 0.1
+    n_min: 0.01
+    n_max: 0.2
+    q0_min: 0.005
+    q0_max: 0.02
+    h0_min: 0.1
+    h0_max: 0.3
+    # Adimensional (corrected for physical compatibility)
+    Ar_min: 1
+    Ar_max: 40
+    Hr_min: 0.001
+    Hr_max: 15
+    Fr_min: 0.01
+    Fr_max: 1.0
+    M_min: 0.01
+    M_max: 30
+    Re_min: 100
+    Re_max: 75000
+  # Bed geometries to generate datasets for. Must match names in geometry_generator.py.
+  bottom_types: ["BARS", "NOISE", "SLOPE"]
+
+  # Physics-Based Regime Generation Constraints
+  # Margins and ratios for deriving H0 relative to yn and yc
+  regime_constraints:
+    # Safety margin from critical/normal depth to avoid singularity
+    # e.g., for M2: H0 must be < 0.95*yn and > 1.05*yc
+    boundary_margin: 0.05
+
+    # Upper bounds for "infinite" regimes (M1, S1)
+    # H0 max for M1 = m1_max_ratio * yn
+    m1_max_ratio: 3.0
+    s1_max_ratio: 3.0
+
+    # Lower bounds for "zero" regimes (M3, S3)
+    # H0 min for M3 = m3_min_ratio * yc
+    m3_min_ratio: 0.1
+    s3_min_ratio: 0.1
+
+# ===================================================================
+# Section 2: File Paths and Directories
+# ===================================================================
+paths:
+  telemac_dir: "src/telemac"
+  ml_dir: "src/ML"
+  data_dir: "data"
+  log_dir: "log"
+  savepoints_dir: "checkpoints"
+  plot_dir: "img"
+  studies_dir: "studies"
+
+# ===================================================================
+# Section 3: Machine Learning Experiment Definition
+# ===================================================================
+# This section defines a specific ML experiment. To run a different
+# experiment (e.g., direct vs. inverse, different geometry), you
+# would primarily edit the `data` and `optuna` sections.
+
+datasets:
+  b:
+    filename: "BARSa.hdf5"
+    name: "BARSa"
+  s:
+    filename: "SLOPEa.hdf5"
+    name: "SLOPEa"
+  n:
+    filename: "NOISEa.hdf5"
+    name: "NOISEa"
+  test_b:
+    filename: "test_BARS.hdf5"
+    name: "test_BARSa"
+  test_s:
+    filename: "test_SLOPE.hdf5"
+    name: "test_SLOPEa"
+  test_n:
+    filename: "test_NOISE.hdf5"
+    name: "test_NOISEa"
+
+data:
+  # The specific HDF5 dataset to use for this run.
+  file_path: "dat/test_data.hdf5"
+
+  # Preprocessing flags. `normalize_output` is often a hyperparameter.
+  normalize_input: true
+  normalize_output: true
+  boxcox_transform: false
+  preload_hdf5: false
+  chunk_size_hdf5: null
+
+  # --- CRITICAL: Define the model's inputs and outputs for this experiment ---
+  # Example: Inverse Dimensional on BARSa geometry
+  inputs: ['U', 'V']
+  outputs: ['H0','Q0', 'n', 'nut', 'B', 'H']
+
+  # Static Reference Lists (used by code to categorize variables)
+  all_field_vars: ['B', 'F', 'H', 'Q', 'S', 'U', 'V', 'D', 'B*', 'H*', 'U*', 'V*']
+  all_numeric_scalar_vars: ['H0', 'Q0', 'SLOPE', 'n', 'nut', 'Vr', 'Fr', 'Re', 'Ar', 'Hr', 'M']
+  all_non_numeric_scalar_vars: ['BOTTOM', 'direction', 'id', 'subcritical', 'yc', 'yn']
+
+# --- Model Architecture Defaults ---
+# These are base values for a single run; Optuna will override these during a search.
+model:
+  name: "ID-BARSa-SingleRun-{timestamp}"
+  architecture: "FNO"
+  class_name: "FNOnet"
+  n_layers: 4
+  n_modes_x: 72
+  n_modes_y: 16
+  hidden_channels: 64
+  lifting_channels: 32
+  projection_channels: 32
+
+# --- Training Defaults ---
+# These are base values for a single run; Optuna will override these during a search.
+training:
+  kfolds: 1             # Use 5 for final cross-validation runs.
+  batch_size: 4
+  num_epochs: 2
+  num_workers: 0
+  accumulation_steps: 1
+  learning_rate: 0.0001
+  test_frac: 0.8
+  validation_frac: 0.5
+  early_stopping_patience: 64
+  early_stopping_delta: 0.0
+  clip_grad_value: 1.0
+  weight_decay: 0.001
+  pretrained_model_name: null # For fine-tuning, provide the name stem here.
+  use_physics_loss: false
+
+# --- Logging ---
+logging:
+  use_wandb: false
+  wandb_project: "Tesis" # Use a new project name to keep results clean
+  plot_enabled: false
+
+# --- Optuna Hyperparameter Search ---
+optuna:
+  study_name: "Study-ID-BARSa" # Give each new study a unique name.
+  study_notes: 'Inverse problem, dimensional, for BARSa geometry (refactored codebase)'
+  n_trials: 100
+  time_limit_per_trial: 86400 # 24 hours in seconds
+
+  hyperparameter_space:
+    learning_rate: { type: "float", low: 1e-6, high: 1e-3, log: true }
+    weight_decay: { type: "float", low: 1e-6, high: 5e-3, log: true }
+    batch_size: { type: "categorical", choices: [8, 16, 32, 64] }
+    accumulation_steps: { type: "categorical", choices: [1] }
+    hidden_channels: { type: "int", low: 16, high: 256, step: 16 }
+    lifting_channels: { type: "int", low: 16, high: 256, step: 16 }
+    projection_channels: { type: "int", low: 16, high: 256, step: 16 }
+    n_layers: { type: "int", low: 1, high: 16, step: 1 }
+    n_modes_x: { type: "int", low: 4, high: 200, step: 4 }
+    n_modes_y: { type: "int", low: 2, high: 16, step: 2 }
+    use_physics_loss: { type: "categorical", choices: [true, false] }
+    normalize_output: { type: "categorical", choices: [true, false] }

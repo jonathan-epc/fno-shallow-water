@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FNO Surrogate Model</title>
+    <link rel="stylesheet" href="/static/style.css">
+        <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+</head>
+<body>
+    <h1>FNO Surrogate Model Interface</h1>
+
+    <div class="container">
+        <div class="input-section">
+            <h2>Model Selector</h2>
+            <select id="model-selector" onchange="updateUIForSelectedModel()"></select>
+
+            <div id="inputs-container">
+                <div id="dataset-selector-wrapper" class="dataset-wrapper">
+                    <h3>Load from Dataset</h3>
+                    <div class="dataset-controls">
+                        <label for="dataset-selector">Dataset:</label>
+                        <select id="dataset-selector" class="flex-grow"></select>
+                        
+                        <label for="case-index">Case Index:</label>
+                        <input type="number" id="case-index" min="0" value="0" class="number-input-small">
+                        
+                        <button onclick="loadCaseData()" class="btn-small">Load Case</button>
+                    </div>
+                </div>
+
+                <div id="scalar-inputs-wrapper">
+                    <h3>Scalar Inputs</h3>
+                    <div id="scalar-inputs-container"></div>
+                </div>
+
+                <div id="field-inputs-wrapper">
+                    <h3>Field Inputs</h3>
+                    <div id="field-inputs-container">
+                        <label id="field-label" for="field_data_flat">Field Data (Loaded from Dataset):</label>
+                        <textarea id="field_data_flat" rows="3" readonly placeholder="Please load a case from the dataset above to populate the field data."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <button id="predict-button" onclick="sendPredictionRequest()">Predict</button>
+        </div>
+
+        <div class="output-section">
+            <h2>Input Fields</h2>
+            <div id="input-plot-container"></div>
+            <h2>Prediction Results</h2>
+            <div id="loading" class="hidden">Loading...</div>
+            <div id="plot-container"></div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

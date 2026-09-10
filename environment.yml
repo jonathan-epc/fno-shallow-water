@@ -1,0 +1,71 @@
+# Tesis Project - Unified Conda Environment
+# This is the single source of truth for all project dependencies.
+# To create the environment: `conda env create -f environment.yml`
+# To update the environment: `conda env update -f environment.yml --prune`
+
+name: ML-Tesis # Renamed for clarity
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  # --- Core Scientific Computing ---
+  - python=3.11 # Specifying a Python version is good practice
+  - numpy=1.24.4
+  - pandas
+  - scipy
+  - scikit-learn
+  - h5py
+  - xarray
+
+  # --- PyTorch & GPU ---
+  - pytorch
+  # - pytorch-cuda=12.4 # Specify CUDA version for reproducibility
+  - torchaudio
+
+  # --- Machine Learning & Optuna ---
+  - optuna
+  - joblib
+  - sqlalchemy # Dependency for Optuna DB storage
+
+  # --- Plotting & Data Visualization ---
+  - matplotlib
+  - seaborn
+  - cmap # Custom colormap package
+
+  # --- Jupyter & Development ---
+  - ipykernel
+  - ipython
+  - ipywidgets
+  - tqdm
+
+  # --- Utilities ---
+  - pyyaml
+  - loguru
+  - pydantic
+
+  # --- Packages installed via Pip ---
+  # These are packages not available on the main Conda channels or
+  # require a specific version from PyPI.
+  - pip
+  - pip:
+      - black==24.10.0
+      - ruff==0.14.9
+      - pre-commit
+      - pytest
+      - pytest-mock
+      - configmypy==0.2.0
+      - GitPython==3.1.43
+      - wandb==0.18.7
+      - tensorly==0.9.0
+      - tensorly-torch==0.5.0
+      - xarray-selafin
+      - torcheval
+      # Using the specific, reproducible commit for neuraloperator
+      - git+https://github.com/NeuralOperator/neuraloperator.git@a9e63cbc859e7c5f01d82c4c1510b801f0211590
+      # --- Web App Dependencies ---
+      - fastapi
+      - uvicorn
+      - python-multipart # Good to have for form data/file uploads
+    

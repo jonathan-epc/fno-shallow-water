@@ -1,0 +1,135 @@
+
+# Python & Development Tooling
+# ===================================================================
+# Byte-compiled / optimized / C extensions
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+build/
+dist/
+eggs/
+*.egg-info/
+*.egg
+
+# Test reports and caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Editor and OS-specific files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.pdm-python
+
+# ===================================================================
+# Project-Specific Generated Artifacts
+# ===================================================================
+
+# Directories for generated output (leading '/' ignores only at root)
+/log/
+/plots/
+/checkpoints/
+/studies/
+
+# Specific generated files
+*.db
+*.db-journal
+*.ipynb
+.ipynb_checkpoints/
+
+# Ignore local wandb runs directory
+wandb/
+
+# ===================================================================
+# TELEMAC Simulation Files
+# ===================================================================
+# Ignore the contents of the directories that hold generated simulation files
+src/telemac/cas/*
+src/telemac/geo/*
+src/telemac/res/*
+src/telemac/log/*
+
+# Ignore specific TELEMAC file types if they appear elsewhere
+*.cas
+*.slf
+*.lis
+
+# Whitelist base mesh templates (Must be after global ignores for *.cas, *.slf)
+!src/telemac/geo/mesh_3x3.slf
+!src/telemac/geo/mesh_*.slf
+
+# ===================================================================
+# LaTeX / Article Artifacts
+# ===================================================================
+# Ignore the entire directory for papers and thesis drafts
+/docs/
+
+# Ignore common LaTeX auxiliary files by extension
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+!src/telemac/log/input_generator_sample.log
+*.lot
+*.out
+*.toc
+*.run.xml
+*.synctex.gz
+
+# ===================================================================
+# Large Files & Output Formats
+# ===================================================================
+# Note: test_data.hdf5 is intentionally NOT ignored so CI can use it.
+# If you don't want to track any HDF5 files, uncomment the next line.
+# *.hdf5
+/data/
+
+# Ignore common output and archive formats
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.pdf
+*.svg
+*.mp4
+*.7z
+*.zip
+*.tar.gz
+
+# Whitelist images used for documentation/README
+!img/
+!img/**
+
+# Ignore model checkpoints and trained models
+*.pth
+*.pt
+*.onnx
+*.bak
+src/website/models_store/
+models_store/
+
+# ===================================================================
+# Obsolete Paths (from old structure)
+# ===================================================================
+# These are kept for safety to clean up old tracked files if needed,
+# but are not strictly necessary for the new structure.
+ML/data/*
+src/ML/runs/*
+src/ML/runs.old/*
+src/ML/metrics/
+
+# Lockfiles
+uv.lock
+
