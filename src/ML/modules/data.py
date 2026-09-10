@@ -1,7 +1,6 @@
 from collections.abc import Callable
 
 import h5py
-import numpy as np
 import pandas as pd
 import torch
 from scipy.special import inv_boxcox
@@ -306,7 +305,9 @@ class HDF5Dataset(Dataset):
         counts: dict[str, int] = {}
         minima: dict[str, float] = {}
 
-        fields_and_scalars = self.FIELDS + [s for s in self.NUMERIC_SCALARS if s in self.SCALARS]
+        fields_and_scalars = self.FIELDS + [
+            s for s in self.NUMERIC_SCALARS if s in self.SCALARS
+        ]
 
         # Initialize aggregators
         for var in fields_and_scalars:
@@ -326,7 +327,7 @@ class HDF5Dataset(Dataset):
                         val = val.float()
 
                     sums[var] += val.sum().item()
-                    sum_sqs[var] += (val ** 2).sum().item()
+                    sum_sqs[var] += (val**2).sum().item()
                     counts[var] += val.numel()
                     minima[var] = min(minima[var], val.min().item())
 
@@ -337,15 +338,15 @@ class HDF5Dataset(Dataset):
         for var in fields_and_scalars:
             if counts[var] > 0:
                 mean = sums[var] / counts[var]
-                variance = (sum_sqs[var] / counts[var]) - (mean ** 2)
+                variance = (sum_sqs[var] / counts[var]) - (mean**2)
                 variance = max(0.0, variance)  # Handle numerical instability
-                
+
                 # Apply Bessel's correction for sample standard deviation
                 if counts[var] > 1:
                     variance = variance * (counts[var] / (counts[var] - 1))
-                    
+
                 means[var] = mean
-                stds[var] = variance ** 0.5
+                stds[var] = variance**0.5
                 mins_dict[var] = minima[var]
 
         self.stats = (means, stds, mins_dict)

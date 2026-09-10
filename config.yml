@@ -26,10 +26,9 @@ channel:
 mesh:
   num_points_x: 401   # Number of grid points along the channel length.
   num_points_y: 32    # Number of grid points along the channel width.
-  base_mesh_file: "mesh_3x3.slf"       # Base SELAFIN mesh in telemac/geo/ (update after generating new mesh)
-  subcritical_cli: "3x3_riv.cli"       # Subcritical .cli in telemac/bnd/ (update after generating new boundary files)
-  supercritical_cli: "3x3_tor.cli"     # Supercritical .cli in telemac/bnd/ (update after generating new boundary files)
-
+  base_mesh_file: "mesh_401x32.slf"       # Base SELAFIN mesh in telemac/geo/ (update after generating new mesh)
+  subcritical_cli: "401x32_riv.cli"       # Subcritical .cli in telemac/bnd/ (update after generating new boundary files)
+  supercritical_cli: "401x32_tor.cli"     # Supercritical .cli in telemac/bnd/ (update after generating new boundary files)
 simulation_params:
   adimensional_generation: false # Sample physical params + variable L for natural Ar variation
   gravity: 9.81

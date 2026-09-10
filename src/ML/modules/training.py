@@ -718,7 +718,7 @@ def cross_validate(
         else:
             base_dataset = dataset
             real_train_idx = train_idx.tolist()
-            
+
         base_dataset.compute_statistics(real_train_idx)
 
         # --- Create DataLoaders for the current fold ---

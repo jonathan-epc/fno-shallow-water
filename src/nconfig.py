@@ -26,9 +26,17 @@ class ChannelConfig(BaseModel):
 class MeshConfig(BaseModel):
     num_points_x: int = Field(401, gt=0)
     num_points_y: int = Field(32, gt=0)
-    base_mesh_file: str = Field("mesh_3x3.slf", description="Base SELAFIN mesh filename in telemac/geo/")
-    subcritical_cli: str = Field("3x3_riv.cli", description="Subcritical boundary condition filename in telemac/bnd/")
-    supercritical_cli: str = Field("3x3_tor.cli", description="Supercritical boundary condition filename in telemac/bnd/")
+    base_mesh_file: str = Field(
+        "mesh_3x3.slf", description="Base SELAFIN mesh filename in telemac/geo/"
+    )
+    subcritical_cli: str = Field(
+        "3x3_riv.cli",
+        description="Subcritical boundary condition filename in telemac/bnd/",
+    )
+    supercritical_cli: str = Field(
+        "3x3_tor.cli",
+        description="Supercritical boundary condition filename in telemac/bnd/",
+    )
 
 
 class SimulationParamsConfig(BaseModel):

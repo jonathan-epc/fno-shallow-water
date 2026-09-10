@@ -338,8 +338,12 @@ class ParameterManager:
                 # Inject Mesh Configuration
                 case_params["num_points_x"] = self.config.mesh.num_points_x
                 case_params["num_points_y"] = self.config.mesh.num_points_y
-                case_params["subcritical_cli"] = getattr(self.config.mesh, "subcritical_cli", "3x3_riv.cli")
-                case_params["supercritical_cli"] = getattr(self.config.mesh, "supercritical_cli", "3x3_tor.cli")
+                case_params["subcritical_cli"] = getattr(
+                    self.config.mesh, "subcritical_cli", "3x3_riv.cli"
+                )
+                case_params["supercritical_cli"] = getattr(
+                    self.config.mesh, "supercritical_cli", "3x3_tor.cli"
+                )
 
                 cases.append(TelemacCase(idx, case_params))
 

@@ -86,14 +86,14 @@ def load_and_validate_data(
     config: ProcessingConfig,
 ) -> tuple[pd.DataFrame, list[str], list[str]]:
     """Load simulation parameters and validate the existence of result files.
-    
+
     Computes any missing adimensional numbers required for processing.
 
     Args:
         config (ProcessingConfig): The processing configuration settings.
 
     Returns:
-        tuple: A tuple containing the parameters DataFrame, a list of result file paths, 
+        tuple: A tuple containing the parameters DataFrame, a list of result file paths,
                and a list of variable names to extract.
     """
     # Use the specified parameters file
@@ -157,7 +157,7 @@ def prepare_parameter_table(
     parameters: pd.DataFrame, parameter_names: list[str], config: ProcessingConfig
 ) -> pd.DataFrame:
     """Compute statistics (mean, variance, etc.) for all numeric parameters.
-    
+
     This is used for normalization across datasets.
 
     Args:
@@ -404,7 +404,7 @@ def parse_args() -> tuple[ProcessingConfig, str]:
     """Parse command-line arguments for the simulation data processor.
 
     Returns:
-        tuple: A tuple containing the ProcessingConfig object and the path 
+        tuple: A tuple containing the ProcessingConfig object and the path
                to the configuration file.
     """
     parser = argparse.ArgumentParser(description="Process simulation data.")

@@ -154,7 +154,9 @@ class ModelFineTuner:
             )
 
             # Compute stats on the target train_val dataset for test evaluation
-            self.logger.info("Computing global statistics over train_val subset for test evaluation.")
+            self.logger.info(
+                "Computing global statistics over train_val subset for test evaluation."
+            )
             full_dataset_for_stats.compute_statistics(train_val_dataset.indices)
 
             # --- Final Test Set Evaluation on Target Dataset ---

@@ -11,17 +11,21 @@ from ML.modules.models import FNOnet
 DEVICE = torch.device("cpu")
 
 DENORMALIZE_OUTPUT = {
-    'ddb': True, 'dds': False, 'ddn': True,
-    'idb': True, 'ids': False, 'idn': True,
-    'dab': True, 'das': True, 'dan': True,
-    'iab': False, 'ias': True, 'ian': False
+    "ddb": True,
+    "dds": False,
+    "ddn": True,
+    "idb": True,
+    "ids": False,
+    "idn": True,
+    "dab": True,
+    "das": True,
+    "dan": True,
+    "iab": False,
+    "ias": True,
+    "ian": False,
 }
 
-DATASET_MAPPING = {
-    'b': 'BARS',
-    's': 'SLOPE',
-    'n': 'NOISE'
-}
+DATASET_MAPPING = {"b": "BARS", "s": "SLOPE", "n": "NOISE"}
 
 DEVICE = torch.device("cpu")
 
@@ -65,20 +69,27 @@ class ModelHandler:
         dataset_suffix = model_key[-1]
         dataset_name = DATASET_MAPPING.get(dataset_suffix)
         if dataset_name:
-            dat_path = model_dir.parent.parent.parent.parent / "data" / f"train_val_{dataset_name}.hdf5"
+            dat_path = (
+                model_dir.parent.parent.parent.parent
+                / "data"
+                / f"train_val_{dataset_name}.hdf5"
+            )
             if dat_path.exists():
                 with h5py.File(dat_path, "r") as h5f:
                     if "statistics" in h5f:
                         stats = h5f["statistics"]
                         config["stats"] = {}
                         import math
-                        for k in stats.attrs.keys():
+
+                        for k in stats.attrs:
                             val = float(stats.attrs[k])
                             if math.isnan(val) or math.isinf(val):
                                 config["stats"][k] = None
                             else:
                                 config["stats"][k] = val
-                        print(f"  [INFO] Loaded {len(config['stats'])} stats for {model_key} from {dataset_name}")
+                        print(
+                            f"  [INFO] Loaded {len(config['stats'])} stats for {model_key} from {dataset_name}"
+                        )
                     else:
                         print(f"  [WARN] No statistics group found in {dat_path}")
 
@@ -133,7 +144,11 @@ class ModelHandler:
 
         scalar_names = [s.get("name") for s in config["input_scalars"]]
         for i, name in enumerate(scalar_names):
-            if "stats" in config and f"{name}_mean" in config["stats"] and f"{name}_variance" in config["stats"]:
+            if (
+                "stats" in config
+                and f"{name}_mean" in config["stats"]
+                and f"{name}_variance" in config["stats"]
+            ):
                 mean = config["stats"][f"{name}_mean"]
                 std = np.sqrt(config["stats"][f"{name}_variance"])
                 scalar_values[i] = (scalar_values[i] - mean) / std
@@ -155,9 +170,13 @@ class ModelHandler:
             all_fields_tensor = torch.tensor(
                 field_flat, dtype=torch.float32, device=DEVICE
             ).view(len(config["input_fields"]), dims["height"], dims["width"])
-            
+
             for i, name in enumerate(config["input_fields"]):
-                if "stats" in config and f"{name}_mean" in config["stats"] and f"{name}_variance" in config["stats"]:
+                if (
+                    "stats" in config
+                    and f"{name}_mean" in config["stats"]
+                    and f"{name}_variance" in config["stats"]
+                ):
                     mean = config["stats"][f"{name}_mean"]
                     std = np.sqrt(config["stats"][f"{name}_variance"])
                     all_fields_tensor[i] = (all_fields_tensor[i] - mean) / std
@@ -174,7 +193,7 @@ class ModelHandler:
     def _postprocess_output(self, raw_predictions, config: dict):
         field_preds, scalar_preds = raw_predictions
         results = {"error": None}
-        
+
         denormalize = True
 
         if field_preds is not None:
@@ -187,13 +206,21 @@ class ModelHandler:
 
             if denormalize:
                 for i, name in enumerate(output_field_names):
-                    if "stats" in config and f"{name}_mean" in config["stats"] and f"{name}_variance" in config["stats"]:
+                    if (
+                        "stats" in config
+                        and f"{name}_mean" in config["stats"]
+                        and f"{name}_variance" in config["stats"]
+                    ):
                         mean = config["stats"][f"{name}_mean"]
                         std = np.sqrt(config["stats"][f"{name}_variance"])
                         field_preds_squeezed[i] = field_preds_squeezed[i] * std + mean
 
             flat_data_dict = {
-                name: np.nan_to_num(field_preds_squeezed[i], nan=0.0, posinf=0.0, neginf=0.0).flatten().tolist()
+                name: np.nan_to_num(
+                    field_preds_squeezed[i], nan=0.0, posinf=0.0, neginf=0.0
+                )
+                .flatten()
+                .tolist()
                 for i, name in enumerate(output_field_names)
             }
             results["field_predictions_flat"] = flat_data_dict
@@ -201,14 +228,20 @@ class ModelHandler:
         if scalar_preds is not None:
             scalar_preds_squeezed = scalar_preds.squeeze(0).cpu().numpy()
             output_scalar_names = config.get("output_scalars", [])
-            
+
             if denormalize:
                 for i, name in enumerate(output_scalar_names):
-                    if "stats" in config and f"{name}_mean" in config["stats"] and f"{name}_variance" in config["stats"]:
+                    if (
+                        "stats" in config
+                        and f"{name}_mean" in config["stats"]
+                        and f"{name}_variance" in config["stats"]
+                    ):
                         mean = config["stats"][f"{name}_mean"]
                         std = np.sqrt(config["stats"][f"{name}_variance"])
                         scalar_preds_squeezed[i] = scalar_preds_squeezed[i] * std + mean
-                        
-            results["scalar_predictions"] = np.nan_to_num(scalar_preds_squeezed, nan=0.0, posinf=0.0, neginf=0.0).tolist()
+
+            results["scalar_predictions"] = np.nan_to_num(
+                scalar_preds_squeezed, nan=0.0, posinf=0.0, neginf=0.0
+            ).tolist()
 
         return results

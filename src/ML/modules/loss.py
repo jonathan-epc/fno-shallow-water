@@ -71,12 +71,12 @@ class PhysicsInformedLoss(nn.Module):
         self.input_vars = input_vars
         self.output_vars = output_vars
         self.config = config
-        
+
         if isinstance(dataset, torch.utils.data.Subset):
             self.dataset = dataset.dataset
         else:
             self.dataset = dataset
-            
+
         self.epsilon = epsilon
         self.alpha = alpha
         self.temperature = temperature

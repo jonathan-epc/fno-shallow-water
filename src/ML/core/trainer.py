@@ -68,7 +68,9 @@ class ModelTrainer:
         try:
             # 1. Load Data
             import os
+
             from torch.utils.data import random_split
+
             if os.path.exists(self.config.data.parameters_path):
                 train_val_dataset = HDF5Dataset.from_config(
                     self.config, self.config.data.file_path, filter_set_type="train_val"
@@ -77,8 +79,12 @@ class ModelTrainer:
                     self.config, self.config.data.file_path, filter_set_type="test"
                 )
             else:
-                self.logger.warning(f"Parameters file {self.config.data.parameters_path} not found. Falling back to random_split.")
-                full_dataset = HDF5Dataset.from_config(self.config, self.config.data.file_path)
+                self.logger.warning(
+                    f"Parameters file {self.config.data.parameters_path} not found. Falling back to random_split."
+                )
+                full_dataset = HDF5Dataset.from_config(
+                    self.config, self.config.data.file_path
+                )
                 test_size = int(self.config.training.test_frac * len(full_dataset))
                 train_val_size = len(full_dataset) - test_size
                 g_split = torch.Generator().manual_seed(self.config.seed)
@@ -113,13 +119,15 @@ class ModelTrainer:
             self.logger.info(f"Training finished. Average CV loss: {avg_cv_loss:.4f}")
 
             # 4. Evaluate on Test Set
-            self.logger.info("Computing global statistics over train_val dataset for test evaluation.")
+            self.logger.info(
+                "Computing global statistics over train_val dataset for test evaluation."
+            )
             if isinstance(train_val_dataset, torch.utils.data.Subset):
                 train_val_dataset.dataset.compute_statistics(train_val_dataset.indices)
             else:
                 train_val_dataset.compute_statistics()
                 test_dataset.copy_statistics_from(train_val_dataset)
-            
+
             self._evaluate_on_test_set(
                 avg_cv_loss, test_dataset, train_val_dataset, model_class, hparams
             )

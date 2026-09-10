@@ -134,7 +134,11 @@ async def get_dataset_case(dataset_name: str, index: int):
             for k in group:
                 data = group[k][()]
                 # Convert to list and flatten, replacing NaNs and Infs with 0.0
-                fields[k] = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0).flatten().tolist()
+                fields[k] = (
+                    np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
+                    .flatten()
+                    .tolist()
+                )
 
             return {
                 "dataset": dataset_name,
