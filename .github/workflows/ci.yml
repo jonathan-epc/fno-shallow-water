@@ -40,19 +40,33 @@ jobs:
       # ---------------------------------
       # --- Step 2: Set up Conda Env ---
       # ---------------------------------
-      # Uses a community action to set up Miniconda.
       - name: Set up Conda environment
         uses: conda-incubator/setup-miniconda@v3
         with:
-          # Use the environment file from our repository
-          environment-file: environment.yml
-          # Specify the Python version from the matrix above
           python-version: ${{ matrix.python-version }}
-          # Activate the environment for subsequent steps
           activate-environment: ML-Tesis
-          # Use Mamba for much faster environment creation
           miniforge-variant: miniforge3
           miniforge-version: latest
+          use-mamba: true
+
+      - name: Get Date
+        id: get-date
+        run: echo "today=$(/bin/date -u '+%Y%m%d')" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Cache Conda environment
+        uses: actions/cache@v4
+        id: conda-cache
+        with:
+          path: ${{ env.CONDA }}/envs
+          key: conda-${{ runner.os }}-${{ runner.arch }}-${{ steps.get-date.outputs.today }}-${{ hashFiles('environment.yml') }}-${{ env.CACHE_NUMBER }}
+        env:
+          CACHE_NUMBER: 0
+
+      - name: Update Conda environment
+        if: steps.conda-cache.outputs.cache-hit != 'true'
+        shell: bash -l {0}
+        run: mamba env update -n ML-Tesis -f environment.yml
 
       # ---------------------------------
       # --- Step 3: Lint & Format Check ---

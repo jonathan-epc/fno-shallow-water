@@ -330,42 +330,49 @@ class PhysicsInformedLoss(nn.Module):
         # Then scale by 1/dx or 1/dy
         # Note: torch.gradient with no spacing assumes spacing=1
 
-        # Let's be explicit with torch.gradient return unpacking
-        d_hu_dy_grid, d_hu_dx_grid = torch.gradient(h * u, dim=(1, 2))
+        # Stack fields for batched first-order grid gradients (spacing=1)
+        stacked = torch.stack([h * u, h * v, h, u, v, h + b], dim=1)
+        d_dy_grid, d_dx_grid = torch.gradient(stacked, dim=(2, 3))
+
+        (
+            d_hu_dy_grid,
+            d_hv_dy_grid,
+            d_h_dy_grid,
+            d_u_dy_grid,
+            d_v_dy_grid,
+            d_z_dy_grid,
+        ) = d_dy_grid.unbind(dim=1)
+        (
+            d_hu_dx_grid,
+            d_hv_dx_grid,
+            d_h_dx_grid,
+            d_u_dx_grid,
+            d_v_dx_grid,
+            d_z_dx_grid,
+        ) = d_dx_grid.unbind(dim=1)
+
         d_hu_dx = d_hu_dx_grid / dx
-
-        d_hv_dy_grid, d_hv_dx_grid = torch.gradient(h * v, dim=(1, 2))
         d_hv_dy = d_hv_dy_grid / dy
-
-        d_h_dy_grid, d_h_dx_grid = torch.gradient(h, dim=(1, 2))
         d_h_dx = d_h_dx_grid / dx
         d_h_dy = d_h_dy_grid / dy
-
-        d_u_dy_grid, d_u_dx_grid = torch.gradient(u, dim=(1, 2))
         d_u_dx = d_u_dx_grid / dx
         d_u_dy = d_u_dy_grid / dy
-
-        d_v_dy_grid, d_v_dx_grid = torch.gradient(v, dim=(1, 2))
         d_v_dx = d_v_dx_grid / dx
         d_v_dy = d_v_dy_grid / dy
-
-        d_z_dy_grid, d_z_dx_grid = torch.gradient(h + b, dim=(1, 2))
         d_z_dx = d_z_dx_grid / dx
         d_z_dy = d_z_dy_grid / dy
 
-        # Second-order gradients for diffusion terms
-        # d^2u/dx^2 = d/dx(du/dx)
-        _, d_u_dx2_grid = torch.gradient(d_u_dx, dim=(1, 2))
+        # Batched second-order grid gradients along respective 1D axes
+        stacked_dx = torch.stack([d_u_dx, d_v_dx], dim=1)
+        d_dx2_grid = torch.gradient(stacked_dx, dim=3)[0]
+        d_u_dx2_grid, d_v_dx2_grid = d_dx2_grid.unbind(dim=1)
         d_u_dx2 = d_u_dx2_grid / dx
-
-        # d^2u/dy^2 = d/dy(du/dy)
-        d_u_dy2_grid, _ = torch.gradient(d_u_dy, dim=(1, 2))
-        d_u_dy2 = d_u_dy2_grid / dy
-
-        _, d_v_dx2_grid = torch.gradient(d_v_dx, dim=(1, 2))
         d_v_dx2 = d_v_dx2_grid / dx
 
-        d_v_dy2_grid, _ = torch.gradient(d_v_dy, dim=(1, 2))
+        stacked_dy = torch.stack([d_u_dy, d_v_dy], dim=1)
+        d_dy2_grid = torch.gradient(stacked_dy, dim=2)[0]
+        d_u_dy2_grid, d_v_dy2_grid = d_dy2_grid.unbind(dim=1)
+        d_u_dy2 = d_u_dy2_grid / dy
         d_v_dy2 = d_v_dy2_grid / dy
 
         # Continuity equation: ∂(hu)/∂x + ∂(hv)/∂y = 0
@@ -378,8 +385,9 @@ class PhysicsInformedLoss(nn.Module):
         pressure_x = -self.g * d_z_dx
         pressure_y = -self.g * d_z_dy
 
-        friction_x = -self.g * (n**2) / (h ** (4 / 3)) * absU * u
-        friction_y = -self.g * (n**2) / (h ** (4 / 3)) * absU * v
+        # Friction term: multiplying by h^(4/3) clears division by small h for numerical stability
+        friction_term_x = self.g * (n**2) * absU * u
+        friction_term_y = self.g * (n**2) * absU * v
 
         diffusion_x = (
             nut / h * (d_h_dx * d_u_dx + d_h_dy * d_u_dy + h * (d_u_dx2 + d_u_dy2))
@@ -389,11 +397,11 @@ class PhysicsInformedLoss(nn.Module):
         )
 
         # Momentum equations: ∂u/∂t + u∂u/∂x + v∂u/∂y = -g∂z/∂x + friction + diffusion
-        momentum_x_loss = h ** (4 / 3) * (
-            advection_x - (pressure_x + friction_x + diffusion_x)
+        momentum_x_loss = (
+            h ** (4 / 3) * (advection_x - pressure_x - diffusion_x) + friction_term_x
         )
-        momentum_y_loss = h ** (4 / 3) * (
-            advection_y - (pressure_y + friction_y + diffusion_y)
+        momentum_y_loss = (
+            h ** (4 / 3) * (advection_y - pressure_y - diffusion_y) + friction_term_y
         )
 
         physics_loss = [
@@ -460,19 +468,20 @@ class PhysicsInformedLoss(nn.Module):
 
         absU = torch.sqrt(torch.clamp(u**2 + (v / Vr) ** 2, min=self.epsilon))
 
-        # Compute gradients for non-dimensional equations
-        d_hu_dx, _ = torch.gradient(h * u, spacing=self.spacing, dim=(1, 2))
-        _, d_hv_dy = torch.gradient(h * v, spacing=self.spacing, dim=(1, 2))
-        d_h_dx, d_h_dy = torch.gradient(h, spacing=self.spacing, dim=(1, 2))
-        d_u_dx, d_u_dy = torch.gradient(u, spacing=self.spacing, dim=(1, 2))
-        d_v_dx, d_v_dy = torch.gradient(v, spacing=self.spacing, dim=(1, 2))
-        d_z_dx, d_z_dy = torch.gradient(Hr * b + h, spacing=self.spacing, dim=(1, 2))
+        # Batched first-order gradients
+        stacked = torch.stack([h * u, h * v, h, u, v, Hr * b + h], dim=1)
+        d_dy, d_dx = torch.gradient(stacked, spacing=self.spacing, dim=(2, 3))
+        d_hu_dy, d_hv_dy, d_h_dy, d_u_dy, d_v_dy, d_z_dy = d_dy.unbind(dim=1)
+        d_hu_dx, d_hv_dx, d_h_dx, d_u_dx, d_v_dx, d_z_dx = d_dx.unbind(dim=1)
 
-        # Second-order gradients for diffusion terms
-        d_u_dx2, d_u_dxdy = torch.gradient(d_u_dx, spacing=self.spacing, dim=(1, 2))
-        d_v_dx2, d_v_dxdy = torch.gradient(d_v_dx, spacing=self.spacing, dim=(1, 2))
-        d_u_dydx, d_u_dy2 = torch.gradient(d_u_dy, spacing=self.spacing, dim=(1, 2))
-        d_v_dydx, d_v_dy2 = torch.gradient(d_v_dy, spacing=self.spacing, dim=(1, 2))
+        # Batched second-order gradients along respective 1D axes
+        stacked_dx = torch.stack([d_u_dx, d_v_dx], dim=1)
+        d_dx2 = torch.gradient(stacked_dx, spacing=self.spacing[1], dim=3)[0]
+        d_u_dx2, d_v_dx2 = d_dx2.unbind(dim=1)
+
+        stacked_dy = torch.stack([d_u_dy, d_v_dy], dim=1)
+        d_dy2 = torch.gradient(stacked_dy, spacing=self.spacing[0], dim=2)[0]
+        d_u_dy2, d_v_dy2 = d_dy2.unbind(dim=1)
 
         # Non-dimensional continuity equation
         continuity_loss = d_hu_dx + Ar / Vr * d_hv_dy
@@ -484,8 +493,9 @@ class PhysicsInformedLoss(nn.Module):
         pressure_x = -1 / Fr**2 * d_z_dx
         pressure_y = -Ar * Vr / Fr**2 * d_z_dy
 
-        friction_x = -M * u / (h ** (4 / 3)) * absU
-        friction_y = -M * v / (h ** (4 / 3)) * absU
+        # Friction term: multiplying by h^(4/3) clears division by small h for numerical stability
+        friction_term_x = M * u * absU
+        friction_term_y = M * v * absU
 
         diffusion_x = (
             1
@@ -509,11 +519,11 @@ class PhysicsInformedLoss(nn.Module):
         )
 
         # Non-dimensional momentum equations
-        momentum_x_loss = h ** (4 / 3) * (
-            advection_x - (pressure_x + friction_x + diffusion_x)
+        momentum_x_loss = (
+            h ** (4 / 3) * (advection_x - pressure_x - diffusion_x) + friction_term_x
         )
-        momentum_y_loss = h ** (4 / 3) * (
-            advection_y - (pressure_y + friction_y + diffusion_y)
+        momentum_y_loss = (
+            h ** (4 / 3) * (advection_y - pressure_y - diffusion_y) + friction_term_y
         )
 
         physics_loss = [

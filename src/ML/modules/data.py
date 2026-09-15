@@ -90,7 +90,7 @@ class HDF5Dataset(Dataset):
         numpoints_y: int,
         channel_length: float,
         channel_width: float,
-        device: torch.device,
+        device: torch.device | str = "cpu",
         normalize_input: bool = True,
         normalize_output: bool = True,
         transform: Callable | None = None,
@@ -112,12 +112,12 @@ class HDF5Dataset(Dataset):
             numpoints_y: Number of grid points in the y direction.
             channel_length: Physical length of the channel domain.
             channel_width: Physical width of the channel domain.
-            device: PyTorch device where tensors should be moved.
+            device: PyTorch device (kept for compatibility; tensors remain on CPU for multi-worker loaders).
             normalize_input: Whether to apply normalization to input variables.
             normalize_output: Whether to apply normalization to output variables.
             transform: Optional callable to transform input data.
             target_transform: Optional callable to transform output data.
-            augment: Whether to apply data augmentation (horizontal flipping).
+            augment: Whether to apply data augmentation (vertical flipping across channel width).
             preload: Whether to load all data into memory at initialization.
             chunk_size: Number of cases to load per chunk. If None, loads on-demand.
             boxcox_transform: Whether to apply Box-Cox transformation to variables.
@@ -269,7 +269,7 @@ class HDF5Dataset(Dataset):
         if normalize:
             tensor = self._normalize(tensor, var)
 
-        return tensor.to(self.device)
+        return tensor
 
     def _validate_variables(self, vars_to_check: list[str]) -> None:
         """Validate that all requested variables exist in the dataset.
@@ -586,10 +586,21 @@ class HDF5Dataset(Dataset):
             if var in self.SCALARS
         ]
 
-        # Apply data augmentation (horizontal flipping)
+        # Apply data augmentation (vertical flipping across the channel width)
+        # Flipping along y-axis (dim 0) requires negating transverse velocity (V, V*) to preserve physical symmetry
         if self.augment and torch.rand(1).item() > 0.5:
-            input_fields = [torch.flip(f, [0]) for f in input_fields]
-            output_fields = [torch.flip(f, [0]) for f in output_fields]
+            input_fields = [
+                -torch.flip(f, [0]) if var in ("V", "V*") else torch.flip(f, [0])
+                for f, var in zip(
+                    input_fields, self.non_scalar_input_indices, strict=True
+                )
+            ]
+            output_fields = [
+                -torch.flip(f, [0]) if var in ("V", "V*") else torch.flip(f, [0])
+                for f, var in zip(
+                    output_fields, self.non_scalar_output_indices, strict=True
+                )
+            ]
 
         return (
             (input_fields, input_scalars),
@@ -599,5 +610,5 @@ class HDF5Dataset(Dataset):
 
     def __del__(self) -> None:
         """Clean up open HDF5 file handles when the dataset is destroyed."""
-        if self.h5_file is not None:
+        if getattr(self, "h5_file", None) is not None:
             self.h5_file.close()

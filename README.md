@@ -80,7 +80,7 @@ where:
 * $g$ is gravitational acceleration, and $\nu_t$ is turbulent kinematic viscosity.
 
 * $\tau_b$ represents bottom shear stress parameterized by Manning's roughness coefficient $n$:
-  
+
   $\tau_{b, x} = \rho g n^2 \frac{u \sqrt{u^2 + v^2}}{h^{1/3}}, \quad \tau_{b, y} = \rho g n^2 \frac{v \sqrt{u^2 + v^2}}{h^{1/3}}$
 
 ### Direct vs. Inverse Formulation
@@ -139,21 +139,21 @@ Three distinct topographic complexity classes are investigated:
 ### Option 1: Conda Environment (Recommended)
 
 1. **Clone the repository:**
-   
+
    ```bash
    git clone https://github.com/jonathan-epc/fno-shallow-water.git
    cd fno-shallow-water
    ```
 
 2. **Create and activate the environment:**
-   
+
    ```bash
    conda env create -f environment.yml
    conda activate ML-Tesis
    ```
 
 3. **Install the package in editable mode:**
-   
+
    ```bash
    pip install -e .
    ```
@@ -209,25 +209,25 @@ The processed datasets will be saved directly into the `data/` directory.
 All machine learning tasks are managed via the scripts in `src/ML/scripts/`. Before running, edit `config.yml` to define your target experiment (dataset path, input/output variables, architecture parameters).
 
 * **Train a single FNO model:**
-  
+
   ```bash
   python src/ML/scripts/train_model.py
   ```
 
 * **Run Bayesian hyperparameter search (Optuna):**
-  
+
   ```bash
   python src/ML/scripts/run_hyperparameter_search.py
   ```
 
 * **Re-run a specific trial from a completed Optuna study:**
-  
+
   ```bash
   python src/ML/scripts/run_trial_repeat.py <TRIAL_ID>
   ```
 
 * **Execute transfer learning experiments across bed morphologies:**
-  
+
   ```bash
   python src/ML/scripts/run_transfer_learning.py
   ```
@@ -264,20 +264,6 @@ To use custom or downloaded checkpoints for evaluation or fine-tuning:
 
 ---
 
-## Citation
-
-If you use this work or codebase in your research, please cite our forthcoming paper:
-
-```bibtex
-@article{poblete2027surrogate_fno,
-  title   = {Accelerating Channel Flow Simulations with Fourier Neural
-Operators: A Study on Direct and Inverse Problems},
-  author  = {Poblete, Jonathan and Niño, Yarko and Zamorano, Luis},
-  journal = {In preparation},
-  year    = {2027},
-  url     = {https://github.com/jonathan-epc/fno-shallow-water}
-}
-```
 
 > [!NOTE]
 > The associated paper is currently in preparation. Placeholders will be updated with the complete publication metadata upon acceptance.
