@@ -166,3 +166,53 @@ def test_varied_flow_regimes_stability():
     assert len(losses) == 3
     for loss in losses:
         assert torch.isfinite(loss), f"Loss term contains NaN or Inf: {loss}"
+
+
+def test_relobralo_eval_mode_no_mutation():
+    """Verify that ReLoBRaLo loss weights and history do not mutate in eval mode."""
+    config = get_config("config.yml")
+    loss_fn = PhysicsInformedLoss.__new__(PhysicsInformedLoss)
+    torch.nn.Module.__init__(loss_fn)
+    loss_fn.config = config
+    loss_fn.epsilon = 1e-5
+    loss_fn.alpha = 0.999
+    loss_fn.temperature = 0.1
+    loss_fn.rho = 0.99
+    loss_fn.call_count = 0
+    loss_fn.data_loss = torch.nn.HuberLoss()
+    loss_fn.physics_loss_fn = torch.nn.MSELoss()
+    loss_fn.register_buffer("lambdas", torch.ones(4))
+    loss_fn.register_buffer("last_losses", torch.ones(4))
+    loss_fn.register_buffer("init_losses", torch.ones(4))
+    loss_fn.input_vars = ["H", "U", "V"]
+    loss_fn.output_vars = ["H", "U", "V"]
+    loss_fn.use_physics_loss = False
+
+    # Check that lambdas is a registered buffer
+    assert "lambdas" in dict(loss_fn.named_buffers())
+
+    loss_fn.eval()
+    initial_lambdas = loss_fn.lambdas.clone()
+    initial_call_count = loss_fn.call_count
+
+    # Simulate forward call in eval mode
+    dummy_pred = (torch.zeros(2, 3, 10, 10), None)
+    dummy_target = ([torch.ones(2, 10, 10) for _ in range(3)], [])
+    loss_fn(([], []), dummy_pred, dummy_target)
+
+    assert loss_fn.call_count == initial_call_count
+    assert torch.equal(loss_fn.lambdas, initial_lambdas)
+
+    # In train mode with physics loss, it should mutate
+    loss_fn.train()
+    loss_fn.use_physics_loss = True
+    dummy_physics = ([torch.tensor(1.0), torch.tensor(1.0), torch.tensor(1.0)], [])
+    compute_method = (
+        "compute_adimensional_physics_loss"
+        if config.data.is_adimensional
+        else "compute_physics_loss"
+    )
+    with patch.object(loss_fn, compute_method, return_value=dummy_physics):
+        loss_fn(([], []), dummy_pred, dummy_target)
+
+    assert loss_fn.call_count == initial_call_count + 1

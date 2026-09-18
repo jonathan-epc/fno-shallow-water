@@ -96,12 +96,12 @@ class PhysicsInformedLoss(nn.Module):
 
         logger.debug(f"Physics loss initialized with spacing: {self.spacing}")
 
-        # Initialize ReLoBRaLo variables
-        self.lambdas = torch.ones(
-            4
+        # Initialize ReLoBRaLo variables as buffers so they move with the module
+        self.register_buffer(
+            "lambdas", torch.ones(4)
         )  # Four loss terms: data, continuity, momentum_x, momentum_y
-        self.last_losses = torch.ones(4)
-        self.init_losses = torch.ones(4)
+        self.register_buffer("last_losses", torch.ones(4))
+        self.register_buffer("init_losses", torch.ones(4))
 
     def forward(
         self,
@@ -180,10 +180,11 @@ class PhysicsInformedLoss(nn.Module):
 
         continuity_loss, momentum_x_loss, momentum_y_loss = physics_loss
 
-        # Update ReLoBRaLo lambdas
-        self.update_relobralo_lambdas(
-            total_data_loss, continuity_loss, momentum_x_loss, momentum_y_loss
-        )
+        # Update ReLoBRaLo lambdas only during training mode
+        if self.training:
+            self.update_relobralo_lambdas(
+                total_data_loss, continuity_loss, momentum_x_loss, momentum_y_loss
+            )
 
         # Combine losses with dynamic weighting
         if self.use_physics_loss:
@@ -229,7 +230,8 @@ class PhysicsInformedLoss(nn.Module):
                 continuity_loss.item(),
                 momentum_x_loss.item(),
                 momentum_y_loss.item(),
-            ]
+            ],
+            device=self.lambdas.device,
         )
 
         # Compute alpha and rho based on iteration
@@ -262,12 +264,12 @@ class PhysicsInformedLoss(nn.Module):
             + (1 - rho) * alpha * init_lambdas_hat
             + (1 - alpha) * lambdas_hat
         )
-        self.lambdas = new_lambdas.detach()
+        self.lambdas.copy_(new_lambdas.detach())
 
         # Update loss history
-        self.last_losses = losses.detach()
+        self.last_losses.copy_(losses.detach())
         if self.call_count == 0:
-            self.init_losses = losses.detach()
+            self.init_losses.copy_(losses.detach())
         self.call_count += 1
 
     def compute_physics_loss(

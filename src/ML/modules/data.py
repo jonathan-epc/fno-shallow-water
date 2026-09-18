@@ -397,13 +397,6 @@ class HDF5Dataset(Dataset):
                 if var in group
             }
         )
-        case.update(
-            {
-                var: torch.from_numpy(group[var][()]).float()
-                for var in self.FIELDS
-                if var in group
-            }
-        )
         # Attempt to load L and W if available, else use defaults
         case["L"] = group.attrs.get("L", self.channel_length)
         case["W"] = group.attrs.get("W", self.channel_width)
@@ -443,9 +436,8 @@ class HDF5Dataset(Dataset):
             min((chunk_idx + 1) * self.chunk_size, self.len),
         )
 
-        if self.h5_file is None:
-            with h5py.File(self.file_path, "r", swmr=True) as f:
-                self.h5_file = f
+        if self.h5_file is None or not bool(self.h5_file):
+            self.h5_file = h5py.File(self.file_path, "r", swmr=True)
 
         self.current_chunk = {
             key: self._load_case(self.h5_file[key]) for key in self.keys[start:end]
