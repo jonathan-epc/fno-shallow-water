@@ -39,3 +39,8 @@ known-first-party = ["ML", "telemac", "common", "modules", "website", "nconfig",
 [tool.pytest.ini_options]
 # Add the 'src' directory to Python's path so that tests can find the code.
 pythonpath = ["src"]
+markers = [
+    "smoke: Quick sanity checks for module imports, CLI entrypoints, and basic initialization",
+    "unit: Isolated unit tests for physics loss, hydraulics, models, and telemac modules",
+    "integration: End-to-end pipeline training, search, and API tests",
+]

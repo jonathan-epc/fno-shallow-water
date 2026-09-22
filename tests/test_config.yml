@@ -1,0 +1,42 @@
+# Configuration for fast integration tests. Overrides main config for speed.
+
+data:
+  file_path: "data/SLOPEa.hdf5"
+  inputs: ['H0', 'Q0', 'n', 'nut', 'B']
+  outputs: ['H', 'U', 'V']
+
+model:
+  n_layers: 1
+  n_modes_x: 4
+  n_modes_y: 2
+  hidden_channels: 8
+  lifting_channels: 8
+  projection_channels: 8
+
+training:
+  num_epochs: 1
+  kfolds: 1
+  batch_size: 2
+  test_frac: 0.5
+  validation_frac: 0.5
+
+optuna:
+  study_name: "integration_test_study"
+  n_trials: 1
+  time_limit_per_trial: 30.0
+  hyperparameter_space:
+    learning_rate: { type: "float", low: 1e-4, high: 1e-3, log: true }
+    weight_decay: { type: "float", low: 1e-4, high: 1e-3, log: true }
+    batch_size: { type: "categorical", choices: [2] }
+    accumulation_steps: { type: "categorical", choices: [1] }
+    hidden_channels: { type: "int", low: 4, high: 8, step: 4 }
+    lifting_channels: { type: "int", low: 4, high: 8, step: 4 }
+    projection_channels: { type: "int", low: 4, high: 8, step: 4 }
+    n_layers: { type: "int", low: 1, high: 2, step: 1 }
+    n_modes_x: { type: "int", low: 4, high: 8, step: 4 }
+    n_modes_y: { type: "int", low: 2, high: 4, step: 2 }
+    use_physics_loss: { type: "categorical", choices: [false] }
+    normalize_output: { type: "categorical", choices: [false] }
+
+logging:
+  use_wandb: false
