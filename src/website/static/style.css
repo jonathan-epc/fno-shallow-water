@@ -1,0 +1,125 @@
+/* src/website/static/style.css */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f4f7f6;
+    color: #333;
+}
+
+h1, h2, h3 {
+    color: #2c3e50;
+}
+
+.container {
+    display: flex;
+    gap: 20px;
+}
+
+.input-section, .output-section {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.input-section {
+    flex: 1;
+}
+
+.output-section {
+    flex: 2;
+    min-width: 60%;
+}
+
+#model-selector, input[type="text"], textarea, button {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #2980b9;
+}
+
+#predict-button {
+    background-color: #2ecc71;
+    font-weight: bold;
+}
+#predict-button:hover {
+    background-color: #27ae60;
+}
+
+pre {
+    background-color: #ecf0f1;
+    padding: 10px;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.hidden {
+    display: none;
+}
+
+/* --- New Styles for Sliders --- */
+.scalar-input-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 10px;
+}
+
+.scalar-input-row label {
+    flex: 0 0 80px; /* Fixed width for labels */
+    font-weight: bold;
+}
+
+.scalar-input-row input[type="range"] {
+    flex-grow: 1;
+}
+
+.scalar-input-row input[type="number"] {
+    width: 80px;
+}
+
+/* --- Dataset Selector Styles --- */
+.dataset-wrapper {
+    margin-bottom: 20px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.03); /* Subtle background instead of white/transparent */
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.dataset-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.flex-grow {
+    flex: 1;
+}
+
+.number-input-small {
+    width: 80px !important;
+}
+
+.btn-small {
+    padding: 8px 16px !important;
+    margin: 0 !important;
+    width: auto !important;
+}
