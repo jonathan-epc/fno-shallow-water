@@ -1,0 +1,120 @@
+name: Python CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Conda environment
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: ML-Tesis
+          miniforge-variant: miniforge3
+          miniforge-version: latest
+          use-mamba: true
+
+      - name: Cache Conda environment
+        uses: actions/cache@v4
+        id: conda-cache
+        with:
+          path: ${{ env.CONDA }}/envs
+          key: conda-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('environment.yml') }}-${{ env.CACHE_NUMBER }}
+          restore-keys: |
+            conda-${{ runner.os }}-${{ runner.arch }}-
+        env:
+          CACHE_NUMBER: 0
+
+      - name: Update Conda environment
+        if: steps.conda-cache.outputs.cache-hit != 'true'
+        shell: bash -l {0}
+        run: mamba env update -n ML-Tesis -f environment.yml
+
+      - name: Install repository package
+        shell: bash -l {0}
+        run: pip install -e . --no-deps
+
+      - name: Generate synthetic test fixtures
+        shell: bash -l {0}
+        run: |
+          python tests/generate_test_data.py
+
+      - name: Check formatting with Ruff
+        shell: bash -l {0}
+        run: |
+          ruff format . --check
+
+      - name: Lint with Ruff
+        shell: bash -l {0}
+        run: |
+          ruff check .
+
+      - name: Test Module Imports (Smoke)
+        shell: bash -l {0}
+        run: |
+          pytest tests/test_smoke_imports.py -v
+
+      - name: Test Hydraulic Calculations (Physics)
+        shell: bash -l {0}
+        run: |
+          pytest tests/telemac/test_hydraulic_calculations.py -v
+
+      - name: Test TELEMAC Execution & Runner
+        shell: bash -l {0}
+        run: |
+          pytest tests/telemac/test_telemac_execution.py -v
+
+      - name: Test TELEMAC Smoke
+        shell: bash -l {0}
+        run: |
+          pytest tests/telemac/test_telemac_smoke.py -v
+
+      - name: Test Physics Loss & ReLoBRaLo
+        shell: bash -l {0}
+        run: |
+          pytest tests/ml/test_physics_loss.py -v
+
+      - name: Test ML Orchestration Smoke
+        shell: bash -l {0}
+        run: |
+          pytest tests/ml/test_orchestration_smoke.py -v
+
+      - name: Test ML Pipeline Integration
+        shell: bash -l {0}
+        run: |
+          pytest tests/ml/test_pipeline_integration.py -v
+
+      - name: Test ML Orchestration Execution
+        shell: bash -l {0}
+        run: |
+          pytest tests/ml/test_orchestration_execution.py -v
+
+      - name: Test CLI Entrypoints (Smoke)
+        shell: bash -l {0}
+        run: |
+          pytest tests/test_cli_smoke.py -v
+
+      - name: Test TELEMAC Modules & Statistics
+        shell: bash -l {0}
+        run: |
+          pytest tests/telemac/test_telemac_modules.py -v
+
+      - name: Test Website FastAPI Service
+        shell: bash -l {0}
+        run: |
+          pytest tests/website/test_website_api.py -v
