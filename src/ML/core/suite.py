@@ -41,6 +41,16 @@ def resolve_dataset_path(base_config: Config, geom_key: str) -> Path:
     )
 
 
+def resolve_test_dataset_path(file_path: str) -> str:
+    """Resolve the corresponding test HDF5 path when given a split train_val_* file."""
+    path = Path(file_path)
+    if path.name.startswith("train_val_"):
+        test_candidate = path.with_name(path.name.replace("train_val_", "test_", 1))
+        if test_candidate.is_file():
+            return str(test_candidate)
+    return file_path
+
+
 def apply_runtime_overrides(
     cfg: Config,
     epochs: int | None = None,

@@ -12,6 +12,7 @@ from torch.cuda import empty_cache
 from torch.utils.data import DataLoader
 
 from common.utils import setup_logger
+from ML.core.suite import resolve_test_dataset_path
 from ML.modules import models as model_zoo
 from ML.modules.data import HDF5Dataset
 from ML.modules.loss import PhysicsInformedLoss
@@ -150,8 +151,9 @@ class HyperparameterOptimizer:
             file_path=self.config.data.file_path,
             filter_set_type="train_val",
         )
+        test_file_path = resolve_test_dataset_path(self.config.data.file_path)
         self.test_dataset = HDF5Dataset.from_config(
-            self.config, file_path=self.config.data.file_path, filter_set_type="test"
+            self.config, file_path=test_file_path, filter_set_type="test"
         )
         self.full_dataset_for_stats = self.train_val_dataset
 

@@ -160,10 +160,16 @@ class HDF5Dataset(Dataset):
                             f"'set_type' column not found in {parameters_file_path}"
                         )
 
-                    # Filter keys matching the specified partition
-                    valid_ids = set(
-                        params_df[params_df["set_type"] == filter_set_type].index
-                    )
+                    # Filter keys matching the specified partition.
+                    # ParameterManager stores integer IDs (0, 1, ...) while
+                    # simulation_data_processor names HDF5 groups "simulation_<id>".
+                    raw_ids = params_df[params_df["set_type"] == filter_set_type].index
+                    valid_ids: set[str] = set()
+                    for raw_id in raw_ids:
+                        id_str = str(raw_id)
+                        valid_ids.add(id_str)
+                        if not id_str.startswith("simulation_"):
+                            valid_ids.add(f"simulation_{id_str}")
                     self.keys = [k for k in all_keys if k in valid_ids]
                 except Exception as e:
                     raise RuntimeError(

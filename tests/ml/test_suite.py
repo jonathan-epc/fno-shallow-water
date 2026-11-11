@@ -9,7 +9,9 @@ from ML.core.suite import (
     build_case_config,
     execute_case_batch,
     resolve_dataset_path,
+    resolve_test_dataset_path,
 )
+from ML.modules.data import HDF5Dataset
 from ML.scripts.run_hyperparameter_search import main as hparam_main
 from ML.scripts.train_model import main as train_main
 
@@ -158,3 +160,55 @@ def test_hparam_search_cases_flag_dispatches_subset(base_config, tmp_path, monke
 
         hparam_main()
         assert mock_opt_cls.call_count == 2
+
+
+def test_resolve_test_dataset_path_finds_sibling_test_file(tmp_path):
+    """Verify resolve_test_dataset_path switches train_val_* to sibling test_* file."""
+    train_file = tmp_path / "train_val_BARS.hdf5"
+    train_file.write_bytes(b"placeholder")
+    assert resolve_test_dataset_path(str(train_file)) == str(train_file)
+
+    test_file = tmp_path / "test_BARS.hdf5"
+    test_file.write_bytes(b"placeholder")
+    assert resolve_test_dataset_path(str(train_file)) == str(test_file)
+
+
+def test_hdf5_dataset_matches_numeric_parameter_ids(tmp_path):
+    """Verify HDF5Dataset matches integer IDs in parameters.csv to simulation_<id> groups."""
+    import h5py
+    import numpy as np
+    import pandas as pd
+
+    h5_path = tmp_path / "train_val_SLOPE.hdf5"
+    with h5py.File(h5_path, "w") as f:
+        for sim_id in (0, 1):
+            grp = f.create_group(f"simulation_{sim_id}")
+            grp.attrs["H0"] = 0.2
+            grp.attrs["Q0"] = 0.01
+            grp.attrs["n"] = 0.02
+            grp.attrs["nut"] = 1e-4
+            grp.create_dataset("B", data=np.zeros((4, 8), dtype=np.float32))
+            grp.create_dataset("H", data=np.ones((4, 8), dtype=np.float32))
+
+    csv_path = tmp_path / "parameters.csv"
+    pd.DataFrame(
+        [
+            {"id": 0, "set_type": "train_val"},
+            {"id": 1, "set_type": "test"},
+        ]
+    ).to_csv(csv_path, index=False)
+
+    ds = HDF5Dataset(
+        file_path=str(h5_path),
+        input_vars=["H0", "Q0", "n", "nut", "B"],
+        output_vars=["H"],
+        numpoints_x=8,
+        numpoints_y=4,
+        channel_length=12.0,
+        channel_width=0.3,
+        parameters_file_path=str(csv_path),
+        filter_set_type="train_val",
+        augment=False,
+    )
+    assert ds.keys == ["simulation_0"]
+    assert len(ds) == 1

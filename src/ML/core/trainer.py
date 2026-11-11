@@ -8,6 +8,7 @@ import wandb
 from torch.utils.data import DataLoader
 
 from common.utils import setup_logger
+from ML.core.suite import resolve_test_dataset_path
 from ML.modules import models as model_zoo
 from ML.modules.data import HDF5Dataset
 from ML.modules.loss import PhysicsInformedLoss
@@ -75,8 +76,9 @@ class ModelTrainer:
                 train_val_dataset = HDF5Dataset.from_config(
                     self.config, self.config.data.file_path, filter_set_type="train_val"
                 )
+                test_file_path = resolve_test_dataset_path(self.config.data.file_path)
                 test_dataset = HDF5Dataset.from_config(
-                    self.config, self.config.data.file_path, filter_set_type="test"
+                    self.config, test_file_path, filter_set_type="test"
                 )
             else:
                 self.logger.warning(
@@ -160,6 +162,10 @@ class ModelTrainer:
         hparams: dict[str, Any],
     ) -> None:
         """Evaluates the best saved model on the held-out test set."""
+        if len(test_dataset) == 0:
+            self.logger.warning("Test dataset is empty. Skipping final evaluation.")
+            return
+
         self.logger.info("Performing final evaluation on the test set...")
         best_model_path = (
             Path(self.config.paths.savepoints_dir)

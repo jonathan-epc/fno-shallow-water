@@ -174,3 +174,22 @@ def test_simulation_data_processor_reads_nested_channel_config(tmp_path: Path):
         assert cfg.channel_length == pytest.approx(15.0)
         assert cfg.bottom_types == ["BARS", "SLOPE"]
         assert mock_process_data.called
+
+
+def test_configured_mesh_and_boundary_files_exist():
+    """Verify configured base mesh and .cli boundary files exist and match node counts."""
+    from nconfig import PROJECT_ROOT, get_config
+
+    cfg = get_config()
+    telemac_dir = PROJECT_ROOT / cfg.paths.telemac_dir
+    mesh_path = telemac_dir / "geo" / cfg.mesh.base_mesh_file
+    riv_cli = telemac_dir / "bnd" / cfg.mesh.subcritical_cli
+    tor_cli = telemac_dir / "bnd" / cfg.mesh.supercritical_cli
+
+    assert mesh_path.is_file(), f"Missing base mesh: {mesh_path}"
+    assert riv_cli.is_file(), f"Missing subcritical .cli: {riv_cli}"
+    assert tor_cli.is_file(), f"Missing supercritical .cli: {tor_cli}"
+
+    expected_bnd_nodes = 2 * cfg.mesh.num_points_x + 2 * cfg.mesh.num_points_y - 4
+    assert len(riv_cli.read_text().splitlines()) == expected_bnd_nodes
+    assert len(tor_cli.read_text().splitlines()) == expected_bnd_nodes

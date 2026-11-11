@@ -190,7 +190,7 @@ All pipeline configurations are centrally controlled via **`config.yml`**.
 Generate parametric simulation inputs (steering `.cas` and geometry `.slf` files) sampled via Latin Hypercube Sampling:
 
 ```bash
-python src/telemac/input_generator.py --mode new --sample_size 1000 --overwrite
+python src/telemac/input_generator.py --mode new --sample_size 1000 --overwrite --pipeline
 python src/telemac/run_telemac_simulations.py
 ```
 
