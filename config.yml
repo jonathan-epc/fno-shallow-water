@@ -119,7 +119,7 @@ datasets:
 
 data:
   # The specific HDF5 dataset to use for this run.
-  file_path: "dat/test_data.hdf5"
+  file_path: "data/test_data.hdf5"
 
   # Preprocessing flags. `normalize_output` is often a hyperparameter.
   normalize_input: true

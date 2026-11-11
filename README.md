@@ -123,7 +123,7 @@ Three distinct topographic complexity classes are investigated:
 ├── src/
 │   ├── common/          # Utilities (structured logger, reproducibility seeders)
 │   ├── ML/              # Machine Learning pipeline
-│   │   ├── core/        # Orchestration (Trainer, Finetuner, Optimizer, ResultsLoader)
+│   │   ├── core/        # Orchestration (Trainer, Finetuner, Optimizer, ResultsLoader, suite)
 │   │   ├── modules/     # Low-level primitives (FNO models, HDF5 datasets, PDE losses)
 │   │   └── scripts/     # Executable entry points (train, tune, transfer, plot)
 │   ├── telemac/         # TELEMAC-2D generation and automation
@@ -206,18 +206,32 @@ The processed datasets will be saved directly into the `data/` directory.
 
 ### 3. Model Training & Optimization
 
-All machine learning tasks are managed via the scripts in `src/ML/scripts/`. Before running, edit `config.yml` to define your target experiment (dataset path, input/output variables, architecture parameters).
+All machine learning tasks are managed via the scripts in `src/ML/scripts/`. Before running, verify your settings in `config.yml` (default device, architecture, dataset directory).
 
-* **Train a single FNO model:**
+* **Train a single FNO model (uses the configuration in `config.yml`):**
 
   ```bash
   python src/ML/scripts/train_model.py
   ```
 
+* **Train all 12 benchmark cases (3 morphologies × direct/inverse × dimensional/adimensional) or a subset:**
+
+  ```bash
+  # Train all 12 cases sequentially
+  python src/ML/scripts/train_model.py --all --epochs 500 --device cuda
+
+  # Or train specific case keys (e.g. ddb, idb, dab, iab, dds, ids, ...)
+  python src/ML/scripts/train_model.py --cases ddb idb --epochs 400 --device cuda
+  ```
+
 * **Run Bayesian hyperparameter search (Optuna):**
 
   ```bash
+  # Single study configured in config.yml
   python src/ML/scripts/run_hyperparameter_search.py
+
+  # Full automated Optuna sweep across all 12 cases
+  python src/ML/scripts/run_hyperparameter_search.py --all --trials 100 --device cuda
   ```
 
 * **Re-run a specific trial from a completed Optuna study:**
@@ -264,6 +278,7 @@ To use custom or downloaded checkpoints for evaluation or fine-tuning:
 
 ---
 
+## Citation
 
 > [!NOTE]
 > The associated paper is currently in preparation. Placeholders will be updated with the complete publication metadata upon acceptance.

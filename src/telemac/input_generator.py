@@ -112,7 +112,7 @@ def main(
     pipeline=False,
     **kwargs,
 ):
-    config = get_config("config.yml")
+    config = get_config()
 
     env_setup = EnvironmentSetup(config)
     setup_data = env_setup.get_setup_data()

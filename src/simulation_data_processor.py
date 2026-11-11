@@ -115,7 +115,8 @@ def load_and_validate_data(
     # Compute adimensional numbers
     def compute_adimensional_numbers(row):
         g = 9.81
-        xc, yc = config.channel_length, config.channel_width
+        xc = row["L"] if "L" in row and pd.notna(row["L"]) else config.channel_length
+        yc = row["W"] if "W" in row and pd.notna(row["W"]) else config.channel_width
         bc, hc = row["SLOPE"] * xc, row["H0"]
         uc = row["Q0"] / (hc * yc)
         nut = row["nut"]
@@ -305,19 +306,23 @@ def process_simulation_results(config: ProcessingConfig, yaml_config: dict) -> N
     logger.info("Processing started")
 
     try:
-        config.bottom_types = yaml_config.get(
-            "bottom_types", ["NOISE", "SLOPE", "BUMP", "BARS"]
+        sim_params = yaml_config.get("simulation_params", {})
+        config.bottom_types = sim_params.get(
+            "bottom_types",
+            yaml_config.get("bottom_types", ["NOISE", "SLOPE", "BUMP", "BARS"]),
         )
         config.parameter_names = yaml_config.get(
             "parameter_names", ["H0", "Q0", "SLOPE", "n"]
         )
         config.variable_names = yaml_config.get("variable_names", ["H", "U", "V"])
 
-        config.channel_length = yaml_config.get("channel_length", 12)
-
-        config.channel_width = yaml_config.get("channel_width", 12)
-
-        config.channel_width = yaml_config.get("channel_width", 12)
+        channel_cfg = yaml_config.get("channel", {})
+        config.channel_length = channel_cfg.get(
+            "length", yaml_config.get("channel_length", 12)
+        )
+        config.channel_width = channel_cfg.get(
+            "width", yaml_config.get("channel_width", 0.3)
+        )
 
         # Resolve parameters file path using data_dir if using default
         if config.parameters_file == "parameters.csv":

@@ -16,7 +16,7 @@ def main():
     Optuna study, and re-runs the training process using that trial's exact
     hyperparameters.
 
-    IMPORTANT: Before running, ensure that the `nconfig.yml` file is configured
+    IMPORTANT: Before running, ensure that the `config.yml` file is configured
     to use the same study (`optuna.study_name`) and dataset (`data.file_path`,
     `data.inputs`, `data.outputs`) that the original trial was run on.
     """
@@ -33,7 +33,7 @@ def main():
 
     logger = setup_logger()
     try:
-        config = get_config("nconfig.yml")
+        config = get_config()
         set_seed(config.seed)
 
         logger.info(

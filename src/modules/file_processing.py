@@ -33,7 +33,8 @@ def process_and_save(
             case["Q0"],
             case["SLOPE"],
         )
-        xc, yc = channel_length, channel_width
+        xc = case.get("L", channel_length)
+        yc = case.get("W", channel_width)
         bc, hc = SLOPE * xc, H0
         uc = Q0 / (H0 * yc)
 
@@ -87,12 +88,16 @@ def process_and_save(
             variable_stats["B"] = calculate_statistics(pd.Series(variable_B.values))
 
             # Prepare case dictionary for adimensional numbers
+            case_l = simulation_parameters.get("L", channel_length)
+            case_w = simulation_parameters.get("W", channel_width)
             case = {
                 "H0": simulation_parameters["H0"],
                 "Q0": simulation_parameters["Q0"],
                 "n": simulation_parameters["n"],
                 "nut": simulation_parameters["nut"],
                 "SLOPE": simulation_parameters["SLOPE"],
+                "L": channel_length if pd.isna(case_l) else float(case_l),
+                "W": channel_width if pd.isna(case_w) else float(case_w),
                 "H": result["H"][-1].values,
                 "U": result["U"][-1].values,
                 "V": result["V"][-1].values,

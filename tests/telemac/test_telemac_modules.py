@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
@@ -8,7 +9,11 @@ from modules.statistics import (
     combine_statistics,
     normalize_statistics,
 )
-from simulation_data_processor import ProcessingConfig, get_output_files
+from simulation_data_processor import (
+    ProcessingConfig,
+    get_output_files,
+    process_simulation_results,
+)
 from telemac.modules.log_parser import LogParser, SimulationStatus
 
 pytestmark = pytest.mark.unit
@@ -123,3 +128,49 @@ def test_statistics_calculation_and_combination():
     norm_val = normalize_statistics(12.0, "var_a", table)
     # (12 - 10) / sqrt(4) = 2 / 2 = 1.0
     assert norm_val == pytest.approx(1.0)
+
+
+def test_simulation_data_processor_reads_nested_channel_config(tmp_path: Path):
+    """Verify process_simulation_results reads nested channel width/length and bottom_types."""
+    cfg = ProcessingConfig(
+        base_dir=str(tmp_path),
+        parameters_file=str(tmp_path / "parameters.csv"),
+    )
+    yaml_config = {
+        "channel": {"width": 0.3, "length": 15.0},
+        "simulation_params": {"bottom_types": ["BARS", "SLOPE"]},
+        "paths": {"data_dir": str(tmp_path)},
+    }
+    params_df = pd.DataFrame(
+        [
+            {
+                "id": "case_1",
+                "H0": 0.2,
+                "Q0": 0.01,
+                "SLOPE": 0.001,
+                "n": 0.02,
+                "nut": 1e-4,
+                "BOTTOM": "BARS",
+                "Ar": 50.0,
+                "Vr": 1.0,
+                "Fr": 0.5,
+                "Hr": 0.1,
+                "Re": 1000.0,
+                "M": 1.0,
+            }
+        ]
+    ).set_index("id")
+
+    with (
+        patch(
+            "simulation_data_processor.load_and_validate_data",
+            return_value=(params_df, ["case_1.slf"], ["H", "U", "V"]),
+        ),
+        patch("simulation_data_processor.get_output_files", return_value={}),
+        patch("simulation_data_processor.process_data") as mock_process_data,
+    ):
+        process_simulation_results(cfg, yaml_config)
+        assert cfg.channel_width == pytest.approx(0.3)
+        assert cfg.channel_length == pytest.approx(15.0)
+        assert cfg.bottom_types == ["BARS", "SLOPE"]
+        assert mock_process_data.called

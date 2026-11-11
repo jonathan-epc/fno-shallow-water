@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader, Dataset, SubsetRandomSampler
 from tqdm.autonotebook import tqdm
 
 # Correct import for the root-level config
-from nconfig import Config
+from nconfig import Config, get_config
 
 # Corrected relative imports
 from .data import HDF5Dataset
@@ -904,7 +904,7 @@ def cross_validation_procedure(
     """
     # --- Setup ---
     if config is None:
-        config = Config("nconfig.yml")
+        config = get_config()
     if hparams is None:
         # Handle default case if needed, ensure hparams exists
         hparams = {

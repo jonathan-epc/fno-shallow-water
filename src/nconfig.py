@@ -259,7 +259,7 @@ def load_config(config_path: Path) -> Config:
 def get_config(config_path: str | None = None) -> Config:
     """
     Gets the singleton Config instance, loading if necessary.
-    If config_path is None, it uses the default nconfig.yml in the project root.
+    If config_path is None, it uses the default config.yml in the project root.
     """
     global _config
     if _config is None:

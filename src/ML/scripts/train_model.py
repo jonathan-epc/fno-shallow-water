@@ -3,30 +3,65 @@
 import sys
 
 from common.utils import set_seed, setup_logger
+from ML.core.suite import (
+    ALL_CASE_KEYS,
+    apply_runtime_overrides,
+    build_suite_parser,
+    execute_case_batch,
+)
 from ML.core.trainer import ModelTrainer
 from nconfig import get_config
 
 
 def main():
-    """
-    Main function to execute a single model training run.
-    """
+    """Main function to execute single or multi-case model training."""
+    parser = build_suite_parser(
+        description="Train FNO surrogate model(s) from config.yml."
+    )
+    args, _ = parser.parse_known_args()
+
     logger = setup_logger()
     try:
-        # Configuration for the run is loaded from the single config.yml file
         config = get_config()
         set_seed(config.seed)
 
-        logger.info(f"Starting training for model: {config.model.name}")
-        logger.info(f"Dataset: {config.data.file_path}")
+        def run_single(cfg):
+            logger.info(f"Starting training for model: {cfg.model.name}")
+            logger.info(f"Dataset: {cfg.data.file_path}")
+            trainer = ModelTrainer(cfg)
+            avg_cv_loss = trainer.train()
+            if avg_cv_loss is not None:
+                logger.info(
+                    f"Training run completed. Average CV loss: {avg_cv_loss:.6f}"
+                )
+            else:
+                logger.error(f"Training run failed for {cfg.model.name}.")
+            return avg_cv_loss
 
-        trainer = ModelTrainer(config)
-        avg_cv_loss = trainer.train()
-
-        if avg_cv_loss is not None:
-            logger.info(f"Training run completed. Average CV loss: {avg_cv_loss:.6f}")
+        selected_cases = ALL_CASE_KEYS if args.all else args.cases
+        if selected_cases:
+            _, failed = execute_case_batch(
+                base_config=config,
+                case_keys=selected_cases,
+                runner_fn=run_single,
+                logger=logger,
+                epochs=args.epochs,
+                device=args.device,
+            )
+            if failed:
+                sys.exit(1)
         else:
-            logger.error("Single training run failed.")
+            run_cfg = (
+                apply_runtime_overrides(
+                    config.model_copy(deep=True),
+                    epochs=args.epochs,
+                    device=args.device,
+                )
+                if (args.epochs is not None or args.device is not None)
+                else config
+            )
+            run_single(run_cfg)
+
         logger.info("--- Training Run Finished ---")
 
     except (FileNotFoundError, ValueError) as e:
