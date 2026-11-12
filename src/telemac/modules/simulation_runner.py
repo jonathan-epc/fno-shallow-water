@@ -1,3 +1,4 @@
+import argparse
 import os
 import subprocess
 
@@ -24,6 +25,12 @@ def run_single_simulation(i, filename, case_parameters, output_dir, steering_fol
     """
     name, ext = os.path.splitext(filename)
     result_file = os.path.join(output_dir, f"{name}.txt")
+    result_slf = os.path.join(output_dir, f"{name}.slf")
+    stalled_file = os.path.join(output_dir, f"{name}_stalled.txt")
+
+    if os.path.exists(stalled_file):
+        logger.warning(f"Skipping {filename}: already quarantined as stalled.")
+        return False
 
     # 1. Smart Status Check
     status = LogParser.analyze(result_file)
@@ -36,18 +43,22 @@ def run_single_simulation(i, filename, case_parameters, output_dir, steering_fol
         return False
 
     elif status == SimulationStatus.UNBALANCED:
-        logger.info(f"Hot Start {filename}: Unbalanced. Extending duration.")
+        if os.path.exists(result_slf):
+            logger.info(f"Hot Start {filename}: Unbalanced. Extending duration.")
+            continue_simulation = True
+        else:
+            logger.info(
+                f"Cold Restart {filename}: Unbalanced log but no .slf available."
+            )
         should_run = True
-        continue_simulation = True
 
     elif status == SimulationStatus.STALLED:
         logger.warning(
             f"Skipping {filename}: Simulation previously stalled (small dt)."
         )
         # Quarantine incomplete/failed result files to prevent downstream ingestion
-        fail_file = os.path.join(output_dir, f"{name}_stalled.txt")
         if os.path.exists(result_file):
-            move_file(result_file, fail_file)
+            move_file(result_file, stalled_file)
         return False
 
     elif status == SimulationStatus.CRASHED:
@@ -77,12 +88,15 @@ def run_single_simulation(i, filename, case_parameters, output_dir, steering_fol
         src_file = os.path.join(steering_folder, filename)
         dst_file = os.path.join(run_dir, filename)
 
-        # For Hot Start, we need the ABSOLUTE path to the *previous* result file
-        # The result file is in output_dir
-        abs_result_file = os.path.abspath(result_file)
+        # For Hot Start, use a path relative to the run directory. TELEMAC
+        # rejects long absolute paths here (the closing quote falls outside its
+        # steering-file line limit).
+        previous_result_path = os.path.relpath(
+            os.path.abspath(result_slf), os.path.abspath(run_dir)
+        ).replace("\\", "/")
 
         prepare_steering_file(
-            src_file, dst_file, result_file, abs_result_file, continue_simulation
+            src_file, dst_file, result_file, previous_result_path, continue_simulation
         )
 
         # Patch relative paths in the CAS file
@@ -113,9 +127,8 @@ def run_single_simulation(i, filename, case_parameters, output_dir, steering_fol
             logger.warning(f"Failed to patch CAS file paths: {e}")
 
         # 3. Run Execution with Timeout
-        run_telemac2d(
-            filename, output_dir, cwd=run_dir, timeout=1200
-        )  # 20 mins timeout
+        timeout = float(os.environ.get("TELEMAC_TIMEOUT", "2400"))
+        run_telemac2d(filename, output_dir, cwd=run_dir, timeout=timeout)
 
     except subprocess.TimeoutExpired:
         logger.error(f"Timeout: {filename} stalled/hung. Marking as failed.")
@@ -179,3 +192,31 @@ def run_telemac2d_on_files(
                 pbar.refresh()
 
     logger.info("All Telemac2D simulations completed")
+
+
+def main() -> int:
+    """CLI entrypoint for running a single TELEMAC-2D case via status-aware runner."""
+    parser = argparse.ArgumentParser(description="Run one TELEMAC-2D case.")
+    parser.add_argument("--cas", required=True, help="Path to the case .cas file")
+    args = parser.parse_args()
+
+    cas_path = os.path.abspath(args.cas)
+    if not os.path.isfile(cas_path):
+        print(f"ERROR: case file not found: {cas_path}")
+        return 2
+
+    filename = os.path.basename(cas_path)
+    steering_folder = os.path.dirname(cas_path)
+    telemac_root = os.path.dirname(steering_folder)
+    output_dir = os.path.join(telemac_root, "res")
+    os.makedirs(output_dir, exist_ok=True)
+
+    ran = run_single_simulation(0, filename, None, output_dir, steering_folder)
+    case_id = os.path.splitext(filename)[0]
+    status = LogParser.analyze(os.path.join(output_dir, f"{case_id}.txt"))
+    print(f"STATUS: {case_id} ran={ran} status={status.name}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

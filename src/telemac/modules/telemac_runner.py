@@ -34,13 +34,18 @@ def run_telemac2d(
         if platform.system() == "Linux"
         else ["python", "-m", "telemac2d"]
     )
+    nproc = int(os.environ.get("NPROC", "1"))
+    command += [f"--ncsize={nproc}"]
+    if nproc > 1:
+        command.append("--mpi")
+
     name, ext = os.path.splitext(filename)
     output_file = os.path.join(output_dir, f"{name}.txt")
 
     try:
         with open(output_file, "w") as output_fh:
             subprocess.run(
-                command + ["--ncsize=1", filename],
+                command + [filename],
                 check=True,
                 stdout=output_fh,
                 stderr=subprocess.STDOUT,

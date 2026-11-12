@@ -76,7 +76,13 @@ class GeometryGenerator:
             flat_mesh_copy["y"].values = (
                 flat_mesh_copy["y"].values / current_wid * channel_width
             )
-        flat_mesh_copy["B"].values = z.T.reshape(1, flat_mesh_copy.y.shape[0])
+        bed_elevation = z.T.reshape(1, -1).astype(flat_mesh_copy["x"].dtype)
+        if "B" in flat_mesh_copy:
+            flat_mesh_copy["B"].values = bed_elevation
+        else:
+            # Some base SELAFIN meshes only carry geometry (Mesh/x/y), not the
+            # bed-elevation variable. Create it so the results stay consistent.
+            flat_mesh_copy["B"] = (("time", "node"), bed_elevation)
 
         # Explicitly set the format to avoid "unknown format" warnings
         flat_mesh_copy.attrs["format"] = "SERAFIN "

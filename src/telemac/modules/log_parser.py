@@ -46,7 +46,11 @@ class LogParser:
             # Common crash indicators in Telemac/Python
             if "Traceback (most recent call last):" in content:
                 return SimulationStatus.CRASHED
-            if "My Work is Done" not in content and "Correct end of run" not in content:
+            content_upper = content.upper()
+            if (
+                "MY WORK IS DONE" not in content_upper
+                and "CORRECT END OF RUN" not in content_upper
+            ):
                 # If it didn't finish cleanly and isn't obviously stalled, assume crashed/interrupted
                 # But check for stalling first as a specific cause of "not finishing"
                 if LogParser._check_stalled(lines):
@@ -58,19 +62,26 @@ class LogParser:
                 return SimulationStatus.STALLED
 
             # 3. Check Flux Balance
-            # Reuse regex logic but robustly
-            last_balance_match = re.search(
-                r"BALANCE OF WATER VOLUME", content, re.DOTALL
+            # Parse the *last* balance block that actually contains boundary
+            # fluxes. Scanning a fixed number of trailing lines can mix several
+            # balance reports (and the final volume summary), producing a false
+            # UNBALANCED result.
+            balance_blocks = re.findall(
+                r"BALANCE OF WATER VOLUME(.*?)(?=\n[ \t]*\n|\Z)",
+                content,
+                re.DOTALL,
             )
-            if not last_balance_match:
+            if not balance_blocks:
                 # If simulation finished without a reported volume balance, treat as non-converged/incomplete.
                 return SimulationStatus.CRASHED
 
-            # Find all flux boundaries in the *last* balance section
-            # We explicitly look at the end of the file
-            last_lines = "\n".join(lines[-100:])  # Optimization: Only scan end
             flux_pattern = r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?"
-            fluxes = re.findall(rf"FLUX BOUNDARY\s+\d+:\s+({flux_pattern})", last_lines)
+            fluxes = []
+            for block in reversed(balance_blocks):
+                found = re.findall(rf"FLUX BOUNDARY\s+\d+:\s+({flux_pattern})", block)
+                if len(found) >= 2:
+                    fluxes = found
+                    break
 
             if len(fluxes) >= 2:
                 try:

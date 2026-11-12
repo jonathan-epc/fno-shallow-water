@@ -19,38 +19,34 @@ def add_continuation_lines(steering_file, previous_result_file):
 
     # Use forward slashes for Telemac compatibility even on Windows
     prev_file_str = str(previous_result_file).replace("\\", "/")
+    prev_line = f"PREVIOUS COMPUTATION FILE = '{prev_file_str}'\n"
 
-    cont_idx = None
-    prev_file_idx = None
-    for idx, line in enumerate(content):
+    # TELEMAC 9.0 enables continuation simply by defining PREVIOUS COMPUTATION
+    # FILE; the old COMPUTATION CONTINUED boolean is rejected as an unknown
+    # keyword.
+    new_content = []
+    prev_found = False
+    for line in content:
         stripped = line.strip()
         if stripped.startswith("COMPUTATION CONTINUED"):
-            cont_idx = idx
-        elif stripped.startswith("PREVIOUS COMPUTATION FILE"):
-            prev_file_idx = idx
+            continue
+        if stripped.startswith("PREVIOUS COMPUTATION FILE"):
+            if not prev_found:
+                new_content.append(prev_line)
+                prev_found = True
+            continue
+        new_content.append(line)
 
-    if cont_idx is not None:
-        content[cont_idx] = "COMPUTATION CONTINUED = YES\n"
-    if prev_file_idx is not None:
-        content[prev_file_idx] = f"PREVIOUS COMPUTATION FILE = '{prev_file_str}'\n"
-
-    if cont_idx is None or prev_file_idx is None:
-        continuation_lines = []
-        if cont_idx is None:
-            continuation_lines.append("\nCOMPUTATION CONTINUED = YES")
-        if prev_file_idx is None:
-            continuation_lines.append(
-                f"\nPREVIOUS COMPUTATION FILE = '{prev_file_str}'\n"
-            )
-
-        # Add lines after the last non-empty line
-        for idx in range(len(content) - 1, -1, -1):
-            if content[idx].strip():
-                content.insert(idx + 1, "\n".join(continuation_lines))
+    if not prev_found:
+        insert_at = len(new_content)
+        for idx in range(len(new_content) - 1, -1, -1):
+            if new_content[idx].strip():
+                insert_at = idx + 1
                 break
+        new_content.insert(insert_at, prev_line)
 
     with open(steering_file, "w") as f:
-        f.writelines(content)
+        f.writelines(new_content)
     logger.info(f"Continuation lines set in file {steering_file}")
 
 

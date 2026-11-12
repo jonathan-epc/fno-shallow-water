@@ -155,7 +155,7 @@ model:
 # These are base values for a single run; Optuna will override these during a search.
 training:
   kfolds: 1             # Use 5 for final cross-validation runs.
-  batch_size: 4
+  batch_size: 16
   num_epochs: 2
   num_workers: 0
   accumulation_steps: 1
